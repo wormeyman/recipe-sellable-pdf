@@ -3,7 +3,7 @@
 Plugin Name: Recipe Sellable PDF
 Plugin URI: https://github.com/wormeyman/recipe-sellable-pdf
 Description: One-click sellable-quality PDFs of WP Recipe Maker recipes, generated server-side. Adds a "Sellable PDF" submenu under WP Recipe Maker and a `wp recipe-pdf generate` WP-CLI command.
-Version: 0.1.0
+Version: 0.2.0
 Author: Eric Johnson
 Author URI: https://ericjohnson.guru/
 Requires PHP: 8.1
@@ -13,7 +13,7 @@ License URI: https://opensource.org/licenses/MIT
 
 defined( 'ABSPATH' ) or die();
 
-define( 'RSPDF_VERSION', '0.1.0' );
+define( 'RSPDF_VERSION', '0.2.0' );
 define( 'RSPDF_PATH', plugin_dir_path( __FILE__ ) );
 define( 'RSPDF_URL', plugin_dir_url( __FILE__ ) );
 

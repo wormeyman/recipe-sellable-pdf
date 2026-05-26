@@ -72,7 +72,8 @@ $rspdf_accent = $rspdf['brand_accent'];
 			<td>
 				<h1 class="title"><?php echo esc_html( $rspdf['title'] ); ?></h1>
 				<?php if ( $rspdf['summary'] ) : ?>
-					<p class="summary"><?php echo esc_html( $rspdf['summary'] ); ?></p>
+					<?php // Summary is pre-sanitized via wp_kses_post() in rspdf_build_view(). ?>
+					<div class="summary"><?php echo $rspdf['summary']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
 				<?php endif; ?>
 			</td>
 		</tr>
@@ -80,7 +81,8 @@ $rspdf_accent = $rspdf['brand_accent'];
 <?php else : ?>
 	<h1 class="title"><?php echo esc_html( $rspdf['title'] ); ?></h1>
 	<?php if ( $rspdf['summary'] ) : ?>
-		<p class="summary"><?php echo esc_html( $rspdf['summary'] ); ?></p>
+		<?php // Summary is pre-sanitized via wp_kses_post() in rspdf_build_view(). ?>
+		<div class="summary"><?php echo $rspdf['summary']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
 	<?php endif; ?>
 <?php endif; ?>
 

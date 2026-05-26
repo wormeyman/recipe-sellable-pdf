@@ -4,7 +4,7 @@ Tags: wprm, wp-recipe-maker, pdf, recipe
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.0
+Stable tag: 0.2.0
 License: MIT
 License URI: https://opensource.org/licenses/MIT
 
@@ -33,6 +33,16 @@ This plugin bundles Dompdf via Composer. The release zip already includes `vendo
 * **In wp-admin:** WP Recipe Maker → Sellable PDF → click "Download PDF" on the recipe you want.
 * **From the command line:** `wp recipe-pdf generate <recipe_or_post_id> [--output=path.pdf]`
 
+== Per-site author name ==
+
+The author shown on each PDF comes from WP Recipe Maker itself, not from this plugin. To set a single author name for every recipe on a site (e.g. "Robin @ All Ways Delicious"):
+
+1. WP Recipe Maker → Settings → Recipe.
+2. Set **Default recipe author display** to "Same name for all recipes".
+3. Set **Same name for all recipes** to the value you want, e.g. `Robin @ All Ways Delicious`.
+
+This plugin reads that setting via `WPRM_Recipe::author()` and falls back to the WordPress post author if the WPRM setting is blank.
+
 == Requirements ==
 
 * WP Recipe Maker (free or premium), active.
@@ -41,5 +51,11 @@ This plugin bundles Dompdf via Composer. The release zip already includes `vendo
 
 == Changelog ==
 
+= 0.2.0 =
+* Fix author rendering: now resolves "same"/"custom"/"post_author" settings to actual names via WPRM_Recipe::author() (previously printed the literal setting value).
+* Sanitize summary as rich text (wp_kses_post) so embedded paragraph tags render as paragraphs instead of literal `<p>...</p>`.
+* Strip HTML from ingredient group headers and ingredient text so embedded `<strong>` tags no longer appear as literal text.
+* Document the per-site author setting in readme.txt and AGENTS.md.
+
 = 0.1.0 =
-* Initial release: row action, meta box, WP-CLI command.
+* Initial release: WP Recipe Maker → Sellable PDF submenu, WP-CLI command.

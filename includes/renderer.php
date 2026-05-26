@@ -103,16 +103,28 @@ function rspdf_build_view( $recipe ): array {
 	$image_id  = (int) $recipe->image_id();
 	$image_uri = $image_id ? rspdf_image_data_uri( $image_id ) : false;
 
+	// Sanitization contract for the template:
+	//   - "Plain-text" fields: pre-stripped via wp_strip_all_tags(); template
+	//     uses esc_html() to render.
+	//   - "Rich-text" fields (summary, notes, instruction step text):
+	//     pre-sanitized via wp_kses_post(); template echoes the HTML directly.
+	// This keeps the template logic simple and matches what Robin's real
+	// recipe data actually contains (mixed plain + HTML from years of edits).
+
+	$strip = static function ( $v ): string {
+		return trim( wp_strip_all_tags( (string) $v ) );
+	};
+
 	$ingredient_groups = [];
 	foreach ( (array) $recipe->ingredients() as $group ) {
 		$ingredient_groups[] = [
-			'name'  => isset( $group['name'] ) ? (string) $group['name'] : '',
+			'name'  => $strip( $group['name'] ?? '' ),
 			'items' => array_map(
-				static function ( $ing ) {
-					$amount = trim( (string) ( $ing['amount'] ?? '' ) );
-					$unit   = trim( (string) ( $ing['unit'] ?? '' ) );
-					$name   = trim( (string) ( $ing['name'] ?? '' ) );
-					$notes  = trim( (string) ( $ing['notes'] ?? '' ) );
+				static function ( $ing ) use ( $strip ) {
+					$amount = $strip( $ing['amount'] ?? '' );
+					$unit   = $strip( $ing['unit'] ?? '' );
+					$name   = $strip( $ing['name'] ?? '' );
+					$notes  = $strip( $ing['notes'] ?? '' );
 					$parts  = array_filter( [ $amount, $unit, $name ] );
 					$text   = implode( ' ', $parts );
 					if ( $notes !== '' ) {
@@ -128,27 +140,37 @@ function rspdf_build_view( $recipe ): array {
 	$instruction_groups = [];
 	foreach ( (array) $recipe->instructions() as $group ) {
 		$instruction_groups[] = [
-			'name'  => isset( $group['name'] ) ? (string) $group['name'] : '',
+			'name'  => $strip( $group['name'] ?? '' ),
 			'steps' => array_map(
 				static function ( $step ) {
-					return trim( (string) ( $step['text'] ?? '' ) );
+					return trim( wp_kses_post( (string) ( $step['text'] ?? '' ) ) );
 				},
 				(array) ( $group['instructions'] ?? [] )
 			),
 		];
 	}
 
+	// Author. WPRM_Recipe::author_display() returns the SETTING ("same",
+	// "post_author", "custom", "default") - NOT a name. The intended public
+	// method is author(), which resolves that setting into an actual string
+	// (from WPRM_Settings, custom_author_name(), or post_author_name()).
+	// Fall back to the post author so this field never reads blank.
+	$author = $strip( $recipe->author() );
+	if ( $author === '' ) {
+		$author = $strip( $recipe->post_author_name() );
+	}
+
 	return [
-		'title'        => (string) $recipe->name(),
-		'summary'      => (string) $recipe->summary(),
-		'author'       => (string) $recipe->author_display(),
-		'course'       => implode( ', ', (array) $recipe->tags( 'course', true ) ),
-		'cuisine'      => implode( ', ', (array) $recipe->tags( 'cuisine', true ) ),
+		'title'        => $strip( $recipe->name() ),
+		'summary'      => trim( wp_kses_post( (string) $recipe->summary() ) ),
+		'author'       => $author,
+		'course'       => implode( ', ', array_map( $strip, (array) $recipe->tags( 'course', true ) ) ),
+		'cuisine'      => implode( ', ', array_map( $strip, (array) $recipe->tags( 'cuisine', true ) ) ),
 		'prep_time'    => rspdf_format_time( $recipe->prep_time(), 'minutes' ),
 		'cook_time'    => rspdf_format_time( $recipe->cook_time(), 'minutes' ),
 		'total_time'   => rspdf_format_time( $recipe->total_time(), 'minutes' ),
-		'servings'     => trim( (string) $recipe->servings() . ' ' . (string) $recipe->servings_unit() ),
-		'notes'        => (string) $recipe->notes(),
+		'servings'     => trim( (string) $recipe->servings() . ' ' . $strip( $recipe->servings_unit() ) ),
+		'notes'        => trim( wp_kses_post( (string) $recipe->notes() ) ),
 		'image_uri'    => $image_uri,
 		'ingredients'  => $ingredient_groups,
 		'instructions' => $instruction_groups,

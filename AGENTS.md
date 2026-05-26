@@ -24,6 +24,32 @@ WPRM-powered sites.
 - Recipe image is loaded from local uploads (no HTTP), resized via
   `wp_get_image_editor()`, and embedded as a `data:` URI.
 
+## Sanitization contract
+
+`rspdf_build_view()` in `includes/renderer.php` is responsible for ALL
+sanitization. The template just renders. Two categories:
+
+- **Plain-text fields** (title, author, course, cuisine, group names,
+  ingredient text, time/serving labels) are pre-stripped with
+  `wp_strip_all_tags()`. The template uses `esc_html()` to render.
+- **Rich-text fields** (`summary`, `notes`, instruction step text) are
+  pre-sanitized with `wp_kses_post()`. The template echoes them directly,
+  with a `// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped`
+  comment explaining why escaping would break the HTML.
+
+If you add a new field, decide which category it belongs to and route it
+through the same machinery. Never let raw WPRM strings reach the template.
+
+## Author resolution
+
+`WPRM_Recipe::author_display()` returns a SETTING value (`'same'`, `'custom'`,
+`'post_author'`, `'default'`) - NOT a name. Always call `$recipe->author()`,
+which resolves the setting to a real string. The renderer falls back to
+`$recipe->post_author_name()` if WPRM gives an empty string.
+
+Per-site author customization lives in WPRM, not in this plugin:
+WP Recipe Maker → Settings → Recipe → "Same name for all recipes".
+
 ## File map
 
 - `recipe-sellable-pdf.php` — plugin header, brand constants, bootstrap.
