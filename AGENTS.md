@@ -69,12 +69,17 @@ and renders with `esc_html()`. Empty/zero values are skipped. Guarded with
 ## File map
 
 - `recipe-sellable-pdf.php` — plugin header, brand constants, bootstrap.
-- `includes/admin.php` — `WP Recipe Maker → Sellable PDF` submenu + the
-  `admin-post.php?action=rspdf_download` download handler (nonce + capability
-  checks).
+- `includes/admin.php` — `WP Recipe Maker → Sellable PDF` submenu (recipe list +
+  the `rspdf_author_name` settings-save form) and the
+  `admin-post.php?action=rspdf_download` download handler. The handler does a
+  nonce check, the page-level capability check (`rspdf_capability()`), AND an
+  object-level `current_user_can( 'edit_post', $recipe->id() )` check.
 - `includes/cli.php` — `wp recipe-pdf generate <id> [--output=path]`.
 - `includes/renderer.php` — `rspdf_resolve_recipe()`, `rspdf_build_view()`,
-  `rspdf_generate()`. Pure functions; no hooks.
+  `rspdf_build_nutrition()`, `rspdf_image_data_uri()`, `rspdf_render_html()`,
+  `rspdf_generate()`, and small helpers (`rspdf_format_time()`, `rspdf_slug()`).
+  No hooks. Note `rspdf_build_view()` is not side-effect-free: it reads the
+  `rspdf_author_name` option and `rspdf_image_data_uri()` touches the filesystem.
 - `templates/recipe.php` — Dompdf HTML/CSS template.
 
 ## Constraints to respect
@@ -101,7 +106,14 @@ and renders with `esc_html()`. Empty/zero values are skipped. Guarded with
    prefers `WPRM_Settings::get('features_manage_access')` and falls back to
    `edit_posts`. Don't hardcode `manage_options`.
 
-4. **Binary PDF output.** The download handler echoes raw PDF bytes after
+4. **Object-level authorization on download.** The download handler must keep its
+   `current_user_can( 'edit_post', $recipe->id() )` check (added in v0.2.1). The
+   page-level capability gate alone is not enough - it does not stop a user from
+   passing an arbitrary `id`, so without this check a lower-privileged user could
+   download recipes (including drafts/private) authored by someone else. Don't
+   remove it as "redundant."
+
+5. **Binary PDF output.** The download handler echoes raw PDF bytes after
    setting `Content-Type: application/pdf`. PCP flags this as
    `WordPress.Security.EscapeOutput.OutputNotEscaped` - the existing
    `phpcs:ignore` line is correct; escaping would corrupt the binary.
