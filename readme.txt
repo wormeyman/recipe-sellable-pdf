@@ -4,7 +4,7 @@ Tags: wprm, wp-recipe-maker, pdf, recipe
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.2.0
+Stable tag: 0.2.1
 License: MIT
 License URI: https://opensource.org/licenses/MIT
 
@@ -50,6 +50,9 @@ This plugin reads that setting via `WPRM_Recipe::author()` and falls back to the
 * The `mbstring` and `gd` PHP extensions (standard on all modern WordPress hosts).
 
 == Changelog ==
+
+= 0.2.1 =
+* Security: enforce object-level authorization on PDF downloads. The download handler now requires edit access to the specific recipe (current_user_can( 'edit_post', ... )), so a user who passes the page capability gate can no longer download recipes (including drafts/private) authored by someone else.
 
 = 0.2.0 =
 * Fix author rendering: now resolves "same"/"custom"/"post_author" settings to actual names via WPRM_Recipe::author() (previously printed the literal setting value).

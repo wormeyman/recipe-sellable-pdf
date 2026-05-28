@@ -164,13 +164,25 @@ add_action( 'admin_post_rspdf_download', function () {
 		wp_die( esc_html__( 'Security check failed.', 'recipe-sellable-pdf' ), '', [ 'response' => 403 ] );
 	}
 
+	$recipe = rspdf_resolve_recipe( $id );
+	if ( is_wp_error( $recipe ) ) {
+		wp_die( esc_html( $recipe->get_error_message() ), '', [ 'response' => 404 ] );
+	}
+
+	// Object-level authorization. The capability gate above is a blanket check;
+	// it does not stop a user from passing an arbitrary ID. Require edit access
+	// to the specific recipe so lower-privileged users cannot download recipes
+	// (including drafts/private) authored by someone else.
+	if ( ! current_user_can( 'edit_post', $recipe->id() ) ) {
+		wp_die( esc_html__( 'You do not have permission to do this.', 'recipe-sellable-pdf' ), '', [ 'response' => 403 ] );
+	}
+
 	$pdf = rspdf_generate( $id );
 	if ( is_wp_error( $pdf ) ) {
 		wp_die( esc_html( $pdf->get_error_message() ), '', [ 'response' => 500 ] );
 	}
 
-	$recipe = rspdf_resolve_recipe( $id );
-	$title  = is_wp_error( $recipe ) ? 'recipe' : (string) $recipe->name();
+	$title = (string) $recipe->name();
 
 	nocache_headers();
 	header( 'Content-Type: application/pdf' );
