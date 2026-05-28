@@ -60,6 +60,17 @@ function rspdf_render_list_page(): void {
 		wp_die( esc_html__( 'You do not have permission to do this.', 'recipe-sellable-pdf' ) );
 	}
 
+	// Save the per-site author name. Handled here (not via options.php) so the
+	// save uses rspdf_capability() rather than options.php's manage_options
+	// default. check_admin_referer() is the nonce check.
+	$saved = false;
+	if ( isset( $_POST['rspdf_save_settings'] ) ) {
+		check_admin_referer( 'rspdf_save_settings' );
+		$author_name = isset( $_POST['rspdf_author_name'] ) ? sanitize_text_field( wp_unslash( $_POST['rspdf_author_name'] ) ) : '';
+		update_option( 'rspdf_author_name', $author_name );
+		$saved = true;
+	}
+
 	$per_page = 20;
 	$paged    = isset( $_GET['paged'] ) ? max( 1, (int) $_GET['paged'] ) : 1; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 	$search   = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -81,6 +92,23 @@ function rspdf_render_list_page(): void {
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Sellable PDF', 'recipe-sellable-pdf' ); ?></h1>
 		<p><?php esc_html_e( 'Generate a styled, sellable-quality PDF of any recipe. Click Download on the row you want.', 'recipe-sellable-pdf' ); ?></p>
+
+		<?php if ( $saved ) : ?>
+			<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Author name saved.', 'recipe-sellable-pdf' ); ?></p></div>
+		<?php endif; ?>
+
+		<h2><?php esc_html_e( 'PDF author name', 'recipe-sellable-pdf' ); ?></h2>
+		<form method="post" style="margin: 0 0 12px 0;">
+			<?php wp_nonce_field( 'rspdf_save_settings' ); ?>
+			<input type="hidden" name="rspdf_save_settings" value="1">
+			<input type="text" class="regular-text" name="rspdf_author_name" id="rspdf_author_name"
+				value="<?php echo esc_attr( (string) get_option( 'rspdf_author_name', '' ) ); ?>"
+				placeholder="<?php esc_attr_e( 'e.g. Your Name or Brand', 'recipe-sellable-pdf' ); ?>">
+			<?php submit_button( __( 'Save author name', 'recipe-sellable-pdf' ), 'secondary', 'submit', false ); ?>
+			<p class="description"><?php esc_html_e( 'Shown as the Author on every PDF from this site. Leave blank to use the recipe\'s own author (WP Recipe Maker setting, then the WordPress post author).', 'recipe-sellable-pdf' ); ?></p>
+		</form>
+
+		<hr>
 
 		<form method="get" style="margin: 12px 0;">
 			<input type="hidden" name="page" value="rspdf">

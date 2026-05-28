@@ -4,7 +4,7 @@ Tags: wprm, wp-recipe-maker, pdf, recipe
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.2.1
+Stable tag: 0.3.0
 License: MIT
 License URI: https://opensource.org/licenses/MIT
 
@@ -50,6 +50,10 @@ This plugin reads that setting via `WPRM_Recipe::author()` and falls back to the
 * The `mbstring` and `gd` PHP extensions (standard on all modern WordPress hosts).
 
 == Changelog ==
+
+= 0.3.0 =
+* Add a Nutrition section to the PDF (calories, carbs, protein, fat, vitamins, etc.), pulled from WP Recipe Maker's nutrition data using its own labels, units, and ordering.
+* Add a "PDF author name" setting on the Sellable PDF admin page. This is the reliable way to set one author name for every PDF on a site, since WPRM's "Same name for all recipes" option is not available on all sites. The setting takes priority over the WPRM author and the WordPress post author.
 
 = 0.2.1 =
 * Security: enforce object-level authorization on PDF downloads. The download handler now requires edit access to the specific recipe (current_user_can( 'edit_post', ... )), so a user who passes the page capability gate can no longer download recipes (including drafts/private) authored by someone else.

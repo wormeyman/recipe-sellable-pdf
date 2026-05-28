@@ -50,6 +50,7 @@ $rspdf_accent = $rspdf['brand_accent'];
 		font-weight: bold;
 	}
 	.notes { color: #555; font-size: 9.5pt; }
+	.nutrition { color: #555; font-size: 9pt; line-height: 1.5; }
 	.footer {
 		position: fixed;
 		bottom: -0.3in;
@@ -154,6 +155,12 @@ $rspdf_meta_rows = array_filter(
 	<div class="rule"></div>
 	<h2 class="section">Notes</h2>
 	<div class="notes"><?php echo wp_kses_post( $rspdf['notes'] ); ?></div>
+<?php endif; ?>
+
+<?php if ( $rspdf['nutrition'] ) : ?>
+	<div class="rule"></div>
+	<h2 class="section">Nutrition</h2>
+	<div class="nutrition"><?php echo esc_html( implode( ' | ', $rspdf['nutrition'] ) ); ?></div>
 <?php endif; ?>
 
 <div class="footer">

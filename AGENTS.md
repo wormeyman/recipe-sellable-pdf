@@ -30,8 +30,8 @@ WPRM-powered sites.
 sanitization. The template just renders. Two categories:
 
 - **Plain-text fields** (title, author, course, cuisine, group names,
-  ingredient text, time/serving labels) are pre-stripped with
-  `wp_strip_all_tags()`. The template uses `esc_html()` to render.
+  ingredient text, time/serving labels, nutrition strings) are pre-stripped
+  with `wp_strip_all_tags()`. The template uses `esc_html()` to render.
 - **Rich-text fields** (`summary`, `notes`, instruction step text) are
   pre-sanitized with `wp_kses_post()`. The template echoes them directly,
   with a `// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped`
@@ -42,13 +42,29 @@ through the same machinery. Never let raw WPRM strings reach the template.
 
 ## Author resolution
 
-`WPRM_Recipe::author_display()` returns a SETTING value (`'same'`, `'custom'`,
-`'post_author'`, `'default'`) - NOT a name. Always call `$recipe->author()`,
-which resolves the setting to a real string. The renderer falls back to
-`$recipe->post_author_name()` if WPRM gives an empty string.
+The renderer resolves the author in priority order (see `rspdf_build_view()`):
 
-Per-site author customization lives in WPRM, not in this plugin:
-WP Recipe Maker → Settings → Recipe → "Same name for all recipes".
+1. **This plugin's `rspdf_author_name` option** — set on the Sellable PDF admin
+   page ("PDF author name" field). This is the reliable cross-site control.
+2. **`$recipe->author()`** — WPRM's resolved author string. Note
+   `author_display()` returns a SETTING value (`'same'`, `'custom'`,
+   `'post_author'`, `'default'`), NOT a name; `author()` resolves it.
+3. **`$recipe->post_author_name()`** — the WordPress post author, so the field
+   never reads blank.
+
+Why the plugin setting exists: WPRM's own "Same name for all recipes" option
+(WP Recipe Maker → Settings → Recipe) is **not exposed on every site/tier** -
+it's present on AWD but not on EAW/ATN. The plugin setting sidesteps that so the
+author can be set uniformly on any site without depending on WPRM's UI.
+
+## Nutrition
+
+`rspdf_build_nutrition()` reads `$recipe->nutrition()` (nutrient => float) and
+formats each value using WPRM's own field config via
+`WPRM_Nutrition::get_fields()` (labels, units, ordering). Output is a flat array
+of plain-text "Label: value+unit" strings; the template joins them with " | "
+and renders with `esc_html()`. Empty/zero values are skipped. Guarded with
+`method_exists`/`class_exists` so it no-ops if WPRM nutrition is unavailable.
 
 ## File map
 
@@ -90,33 +106,38 @@ WP Recipe Maker → Settings → Recipe → "Same name for all recipes".
    `WordPress.Security.EscapeOutput.OutputNotEscaped` - the existing
    `phpcs:ignore` line is correct; escaping would corrupt the binary.
 
-## Local dev with WordPress Studio
+## Local dev with Local (Local by Flywheel)
 
-There is a Studio site set up at `localhost:8883` (site name `RobinPlugin`,
-path `/Users/ericjohnson/Studio/robinplugin/`). It runs Playground
-(WebAssembly), which **does NOT honor symlinks** - Studio dereferences them
-at mount time and copies contents into the virtual filesystem.
+The current dev site is **https://eawplugindev.local/**, run by the **Local**
+app. Site path:
+`/Users/ericjohnson/Local Sites/eawplugindev/app/public/`. It has WP Recipe
+Maker (free + premium) and `plugin-check` installed.
 
-To push changes from this repo into the Studio site:
+Unlike the old Studio/Playground setup, Local runs a real local server and
+**honors symlinks**, so this repo is symlinked straight into the site - no
+rsync needed, edits are live:
 
 ```fish
-rsync -av --delete \
-  --exclude='.git' --exclude='.gitignore' \
-  /Users/ericjohnson/GitHub/recipe-sellable-pdf/ \
-  /Users/ericjohnson/Studio/robinplugin/wp-content/plugins/recipe-sellable-pdf/
+ln -s /Users/ericjohnson/GitHub/recipe-sellable-pdf \
+  "/Users/ericjohnson/Local Sites/eawplugindev/app/public/wp-content/plugins/recipe-sellable-pdf"
 ```
 
-Do **not** add `--delete-excluded` - it'll wipe the destination's `vendor/`.
+(The previous WordPress Studio site at `localhost:8883` is retired; it ran
+Playground/WebAssembly, which dereferenced symlinks and required an rsync to
+push changes.)
 
 ## Running tests / verification
 
 - **PHP syntax:** `for f in *.php includes/*.php templates/*.php; php -l $f; end`
-- **End-to-end via WP-CLI** (in the Studio site):
+- **End-to-end via WP-CLI:** use Local's "Open site shell" (it wires up PHP +
+  the site DB socket), then:
   `wp recipe-pdf generate <recipe_id> --output=/tmp/test.pdf`
-- **Admin smoke test:** load `http://localhost:8883/wp-admin/admin.php?page=rspdf`,
-  confirm the recipe list renders and "Download PDF" buttons work.
-- **Plugin Check:** the `plugin-check` plugin is already installed on the
-  Studio site. Run via wp-admin.
+- **Admin smoke test:** load
+  `https://eawplugindev.local/wp-admin/admin.php?page=rspdf`, confirm the recipe
+  list renders, the "PDF author name" setting saves, and "Download PDF" works.
+- **Plugin Check:** the `plugin-check` plugin is installed on the Local site.
+  Run via wp-admin (Tools → Plugin Check) or
+  `wp plugin check recipe-sellable-pdf` from the site shell.
 
 ## Building a release zip
 
@@ -134,10 +155,9 @@ zip -r recipe-sellable-pdf.zip recipe-sellable-pdf \
   auto-update from GitHub releases. Pattern to follow: see
   `github.com/wormeyman/Eric-Johnson-Guru-WP-Plugin` for the vendored PUC and
   `.github/workflows/release.yml` setup.
-- Settings UI for brand overrides. For now, override via constants in
+- Settings UI for brand overrides. The Sellable PDF admin page has one setting
+  so far (`rspdf_author_name`); brand values still come from constants in
   `wp-config.php`: `RSPDF_BRAND_NAME`, `RSPDF_BRAND_URL`, `RSPDF_BRAND_ACCENT`.
-- Featured-image rendering has not been exercised against a real recipe yet -
-  the seed recipe in the Studio site has no image.
 
 ## Style
 

@@ -97,6 +97,41 @@ function rspdf_format_time( $value, string $unit ): string {
 }
 
 /**
+ * Build a flat list of "Label: value+unit" nutrition strings from a recipe.
+ *
+ * Reuses WPRM's own field config (WPRM_Nutrition::get_fields()) so labels,
+ * units, and ordering match WPRM's recipe card. Skips empty/zero values.
+ * Returns plain-text strings; the template renders them with esc_html().
+ */
+function rspdf_build_nutrition( $recipe ): array {
+	if ( ! method_exists( $recipe, 'nutrition' ) || ! class_exists( 'WPRM_Nutrition' ) ) {
+		return [];
+	}
+
+	$values = (array) $recipe->nutrition();
+	if ( ! $values ) {
+		return [];
+	}
+
+	$out = [];
+	foreach ( WPRM_Nutrition::get_fields() as $key => $field ) {
+		if ( ! isset( $values[ $key ] ) || ! is_numeric( $values[ $key ] ) ) {
+			continue;
+		}
+		$value = (float) $values[ $key ];
+		if ( $value <= 0 ) {
+			continue;
+		}
+		$label  = trim( wp_strip_all_tags( (string) ( $field['label'] ?? $key ) ) );
+		$unit   = trim( wp_strip_all_tags( (string) ( $field['unit'] ?? '' ) ) );
+		$number = rtrim( rtrim( number_format( $value, 2, '.', '' ), '0' ), '.' );
+		$out[]  = $label . ': ' . $number . $unit;
+	}
+
+	return $out;
+}
+
+/**
  * Build the template data array from a WPRM_Recipe.
  */
 function rspdf_build_view( $recipe ): array {
@@ -150,12 +185,17 @@ function rspdf_build_view( $recipe ): array {
 		];
 	}
 
-	// Author. WPRM_Recipe::author_display() returns the SETTING ("same",
-	// "post_author", "custom", "default") - NOT a name. The intended public
-	// method is author(), which resolves that setting into an actual string
-	// (from WPRM_Settings, custom_author_name(), or post_author_name()).
-	// Fall back to the post author so this field never reads blank.
-	$author = $strip( $recipe->author() );
+	// Author, in priority order:
+	//   1. The plugin's own "rspdf_author_name" setting (Sellable PDF admin
+	//      page). This is the reliable cross-site option: WPRM's "Same name
+	//      for all recipes" setting is not exposed on every site/tier.
+	//   2. WPRM's resolved author(). (author_display() returns the SETTING
+	//      string "same"/"post_author"/etc., NOT a name - author() resolves it.)
+	//   3. The WordPress post author, so this field never reads blank.
+	$author = $strip( (string) get_option( 'rspdf_author_name', '' ) );
+	if ( $author === '' ) {
+		$author = $strip( $recipe->author() );
+	}
 	if ( $author === '' ) {
 		$author = $strip( $recipe->post_author_name() );
 	}
@@ -174,6 +214,7 @@ function rspdf_build_view( $recipe ): array {
 		'image_uri'    => $image_uri,
 		'ingredients'  => $ingredient_groups,
 		'instructions' => $instruction_groups,
+		'nutrition'    => rspdf_build_nutrition( $recipe ),
 		'brand_name'   => (string) RSPDF_BRAND_NAME,
 		'brand_url'    => (string) RSPDF_BRAND_URL,
 		'brand_accent' => (string) RSPDF_BRAND_ACCENT,
