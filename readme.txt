@@ -4,7 +4,7 @@ Tags: wprm, wp-recipe-maker, pdf, recipe
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.3.0
+Stable tag: 0.3.1
 License: MIT
 License URI: https://opensource.org/licenses/MIT
 
@@ -50,6 +50,9 @@ This plugin reads that setting via `WPRM_Recipe::author()` and falls back to the
 * The `mbstring` and `gd` PHP extensions (standard on all modern WordPress hosts).
 
 == Changelog ==
+
+= 0.3.1 =
+* Security: update Dompdf to 3.1.6.
 
 = 0.3.0 =
 * Add a Nutrition section to the PDF (calories, carbs, protein, fat, vitamins, etc.), pulled from WP Recipe Maker's nutrition data using its own labels, units, and ordering.
